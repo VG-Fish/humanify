@@ -28,23 +28,52 @@ export const openai = cli()
     "The context size to use for the LLM",
     `${DEFAULT_CONTEXT_WINDOW_SIZE}`
   )
-  .argument("input", "The input minified Javascript file")
-  .action(async (filename, opts) => {
-    if (opts.verbose) {
-      verbose.enabled = true;
-    }
+  .argument("[input]", "The input minified Javascript file")
+  .argument(
+    "[directory]",
+    "The input directory containing minified Javascript files."
+  )
+  .action(
+    async (
+      filename: string | undefined,
+      directory: string | undefined,
+      opts
+    ) => {
+      if (opts.verbose) {
+        verbose.enabled = true;
+      }
 
-    const apiKey = opts.apiKey ?? env("OPENAI_API_KEY");
-    const baseURL = opts.baseURL;
-    const contextWindowSize = parseNumber(opts.contextSize);
-    await unminify(filename, opts.outputDir, [
-      babel,
-      openaiRename({
-        apiKey,
-        baseURL,
-        model: opts.model,
-        contextWindowSize
-      }),
-      prettier
-    ]);
-  });
+      const apiKey = opts.apiKey ?? env("OPENAI_API_KEY");
+      const baseURL = opts.baseURL;
+      const contextWindowSize = parseNumber(opts.contextSize);
+
+      if (filename) {
+        if (directory) {
+          console.error(
+            "Do not pass an input directory (you have already passed in an input file)."
+          );
+          return;
+        }
+
+        await unminify(filename, opts.outputDir, [
+          babel,
+          openaiRename({
+            apiKey,
+            baseURL,
+            model: opts.model,
+            contextWindowSize
+          }),
+          prettier
+        ]);
+      }
+
+      if (directory) {
+        if (filename) {
+          console.error(
+            "Do not pass an input file (you have already passed in an input directory)."
+          );
+          return;
+        }
+      }
+    }
+  );
